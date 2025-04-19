@@ -35,18 +35,12 @@ vedomosti_markets_url = "https://www.vedomosti.ru/rss/rubric/finance/markets.xml
 vedomosti_world_economy_url = "https://www.vedomosti.ru/rss/rubric/economics/global.xml"
 
 
-def get_all_news(items = 10):
+def get_all_news(items = 5):
 
-    finam_df = parse_rss(finam_url, max_items=10)
-
-
-    investing_df = parse_rss(investing_url, max_items=10)
-
-
-    vedomosti_markets_df = parse_rss(vedomosti_markets_url, max_items=10)
-
-
-    vedomosti_world_df = parse_rss(vedomosti_world_economy_url, max_items=10)
+    finam_df = parse_rss(finam_url, max_items=items)
+    investing_df = parse_rss(investing_url, max_items=items)
+    vedomosti_markets_df = parse_rss(vedomosti_markets_url, max_items=items)
+    vedomosti_world_df = parse_rss(vedomosti_world_economy_url, max_items=items)
 
 
 

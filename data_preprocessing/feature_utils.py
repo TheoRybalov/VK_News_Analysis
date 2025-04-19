@@ -5,6 +5,8 @@ import pandas as pd
 from tqdm import tqdm
 from sklearn.decomposition import PCA
 from transformers import AutoTokenizer, AutoModel
+import pickle
+
 
 def get_path_in_project(path: str) -> str:
     current_dir = os.path.dirname(__file__)
@@ -56,7 +58,28 @@ def get_embeddings(titles, model, tokenizer, batch_size=64):
         embeddings.append(cls_embeddings)
     return torch.cat(embeddings, dim=0).numpy()
 
+def train_pca(embeddings, n_components=100):
+    pca = PCA(n_components=n_components, random_state=42)
+    reduced = pca.fit_transform(embeddings)
+    return pd.DataFrame(reduced, columns=[f"PCA_{i+1}" for i in range(n_components)])
+
 def apply_pca(embeddings, n_components=100):
     pca = PCA(n_components=n_components, random_state=42)
     reduced = pca.fit_transform(embeddings)
+    return pd.DataFrame(reduced, columns=[f"PCA_{i+1}" for i in range(n_components)])
+
+def fit_and_save_pca(embeddings, n_components=100, path="models/pca.pkl"):
+    pca = PCA(n_components=n_components, random_state=42)
+    reduced = pca.fit_transform(embeddings)
+    with open(path, "wb") as f:
+        pickle.dump(pca, f)
+    return pd.DataFrame(reduced, columns=[f"PCA_{i+1}" for i in range(n_components)])
+
+def load_pca(path="models/pca.pkl"):
+    with open(path, "rb") as f:
+        return pickle.load(f)
+
+def transform_with_pca(embeddings, pca):
+    reduced = pca.transform(embeddings)
+    n_components = reduced.shape[1]
     return pd.DataFrame(reduced, columns=[f"PCA_{i+1}" for i in range(n_components)])
