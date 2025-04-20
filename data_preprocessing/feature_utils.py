@@ -76,7 +76,8 @@ def fit_and_save_pca(embeddings, n_components=100, path="models/pca.pkl"):
     return pd.DataFrame(reduced, columns=[f"PCA_{i+1}" for i in range(n_components)])
 
 def load_pca(path="models/pca.pkl"):
-    with open(path, "rb") as f:
+    full_path = get_path_in_project(path)
+    with open(full_path, "rb") as f:
         return pickle.load(f)
 
 def transform_with_pca(embeddings, pca):
