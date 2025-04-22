@@ -4,6 +4,9 @@ from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 import pandas as pd
 from datetime import datetime, timedelta
 from main.news_analysis import analyze_news_sentiment
+import os
+
+CSV_PATH = "news_storage.csv"
 
 
 logging.basicConfig(
@@ -16,13 +19,30 @@ def format_news(df):
     messages = []
     for _, row in df.iterrows():
         pub = row["published"]
-        messages.append(
-            f"📰 {row['title']}\n"
-            f"📅 {pub.strftime('%Y-%m-%d %H:%M') if pd.notnull(pub) else 'дата неизвестна'}\n"
+        sentiment = row["sentiment_prediction"]
+
+        # Выбор эмодзи по тональности
+        if sentiment == "позитивная":
+            emoji = "🟢"
+        elif sentiment == "негативная":
+            emoji = "🔴"
+        elif sentiment == "нейтральная":
+            emoji = "⚪"
+        else:
+            emoji = "❓"
+
+        # Форматируем дату
+        date_str = pub.strftime('%Y-%m-%d %H:%M') if pd.notnull(pub) else 'дата неизвестна'
+
+        # Собираем сообщение
+        message = (
+            f"*{row['title']}*\n\n"
+            f"{emoji} {sentiment.upper()}\n\n\n"
             f"🏷️ Источник: {row['source']}\n"
-            f"🧠 Тональность: {row['sentiment_prediction']}\n"
-            f"🔗 {row['link']}\n"
+            f"📅 {date_str}\n"
+            f"🔗 [ссылка на новость]({row['link']})"
         )
+        messages.append(message)
     return messages
 
 
@@ -30,6 +50,8 @@ def sentiment_summary(df):
     counts = df["sentiment_prediction"].value_counts()
     summary = "\n".join(f"{sent}: {counts.get(sent, 0)}" for sent in ["позитивная", "нейтральная", "негативная"])
     return f"📊 Новостной фон:\n{summary}"
+
+
 
 
 # 📌 Команды
@@ -53,7 +75,7 @@ async def analyze(update: Update, context: ContextTypes.DEFAULT_TYPE):
         df = analyze_news_sentiment()
         messages = format_news(df.head(10))
         for msg in messages:
-            await update.message.reply_text(msg)
+            await update.message.reply_text(msg, parse_mode='Markdown')
     except Exception as e:
         await update.message.reply_text(f"Произошла ошибка: {e}")
 
