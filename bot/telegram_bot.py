@@ -5,6 +5,7 @@ import pandas as pd
 from datetime import datetime, timedelta
 from main.news_analysis import analyze_news_sentiment
 import os
+import asyncio
 
 CSV_PATH = "news_storage.csv"
 
@@ -69,15 +70,103 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "/help — справка по командам"
     )
 
-async def analyze(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Анализирую новости, подожди секундочку...")
+
+async def scheduled_news_analysis(context: ContextTypes.DEFAULT_TYPE):
     try:
-        df = analyze_news_sentiment()
-        messages = format_news(df.head(10))
+        chat_id = context.job.chat_id
+        await context.bot.send_message(chat_id=chat_id, text="⏳ Начинаю периодический анализ...")
+
+        # Асинхронный запуск анализа
+        loop = asyncio.get_event_loop()
+        df = await loop.run_in_executor(None, analyze_news_sentiment)
+
+        # Загружаем отправленные ранее
+        if os.path.exists(CSV_PATH):
+            sent_df = pd.read_csv(CSV_PATH)
+            sent_df["published"] = pd.to_datetime(sent_df["published"], errors='coerce')
+        else:
+            sent_df = pd.DataFrame(columns=["link", "published"])
+
+        # Преобразуем типы
+        df["published"] = pd.to_datetime(df["published"], errors='coerce')
+        df["link"] = df["link"].astype(str)
+        sent_df["link"] = sent_df["link"].astype(str)
+
+        # Выбираем 5 самых свежих, но неотправленных
+        latest_df = df.head(5).sort_values(by='published', ascending=True)
+        mask = ~latest_df.set_index(["link", "published"]).index.isin(
+            sent_df.set_index(["link", "published"]).index
+        )
+        new_df = latest_df[mask]
+
+        if new_df.empty:
+            await context.bot.send_message(chat_id=chat_id, text="ℹ️ Новых новостей нет.")
+            return
+
+        messages = format_news(new_df)
+
         for msg in messages:
-            await update.message.reply_text(msg, parse_mode='Markdown')
+            await context.bot.send_message(
+                chat_id=chat_id,
+                text=msg,
+                parse_mode='Markdown'
+            )
+
+        # Обновляем CSV отправленных
+        updated_sent = pd.concat([sent_df, new_df[["link", "published"]]], ignore_index=True)
+        updated_sent.drop_duplicates(inplace=True)
+        updated_sent.to_csv(CSV_PATH, index=False)
+
     except Exception as e:
-        await update.message.reply_text(f"Произошла ошибка: {e}")
+        logging.error(f"Scheduled job error: {e}")
+        await context.bot.send_message(chat_id=chat_id, text=f"⚠️ Ошибка при автоматическом анализе: {e}")
+
+
+
+
+# 📌 Команда /analyze с запуском расписания
+async def analyze(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    try:
+        chat_id = update.effective_chat.id
+        job_queue = context.application.job_queue
+        
+        # Проверка существующих заданий
+        current_jobs = job_queue.get_jobs_by_name(str(chat_id))
+        
+        if not current_jobs:
+            job_queue.run_repeating(
+                scheduled_news_analysis,
+                interval=300,  # 5 минут
+                first=10,      # Первый запуск через 10 сек
+                chat_id=chat_id,
+                name=str(chat_id)
+            )
+            msg = "✅ Автообновление активировано! Новости будут приходить каждые 5 минут"
+        else:
+            msg = "ℹ️ Автообновление уже активно"
+        
+        # Первоначальный анализ
+        await update.message.reply_text("Анализирую новости...")
+        # df = analyze_news_sentiment()
+        # messages = format_news(df.head(10))
+        # for msg in messages:
+        #     await update.message.reply_text(msg, parse_mode='Markdown')
+            
+        await update.message.reply_text(msg)
+        
+    except Exception as e:
+        await update.message.reply_text(f"🚨 Ошибка: {e}")
+        logging.error(f"Analyze error: {e}")
+
+# async def analyze(update: Update, context: ContextTypes.DEFAULT_TYPE):
+#     await update.message.reply_text("Анализирую новости, подожди секундочку...")
+#     try:
+#         df = analyze_news_sentiment()
+#         messages = format_news(df.head(10))
+#         for msg in messages:
+#             await update.message.reply_text(msg, parse_mode='Markdown')
+#     except Exception as e:
+#         await update.message.reply_text(f"Произошла ошибка: {e}")
 
 
 async def today(update: Update, context: ContextTypes.DEFAULT_TYPE):

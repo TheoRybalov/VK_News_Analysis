@@ -43,6 +43,9 @@ def analyze_news_sentiment():
 
     current_news["sentiment_prediction"] = preds_text
 
+    current_news = current_news.sort_values(by='published', ascending=False)
+    current_news['link'] = current_news['link'].astype(str)
+
     current_news.to_csv("outnews.csv", index=False)
     
     return current_news
