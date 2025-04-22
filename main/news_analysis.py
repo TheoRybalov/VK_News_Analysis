@@ -42,7 +42,10 @@ def analyze_news_sentiment():
     preds_text = [label_map[p] for p in preds]
 
     current_news["sentiment_prediction"] = preds_text
-    print(current_news[["title", "sentiment_prediction"]].head(20))
+
+    current_news.to_csv("outnews.csv", index=False)
+    
+    return current_news
 
 
 
