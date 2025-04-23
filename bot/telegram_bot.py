@@ -15,7 +15,7 @@ logging.basicConfig(
     level=logging.INFO
 )
 
-# 🎨 Форматирование новостей
+
 def format_news(df):
     messages = []
     for _, row in df.iterrows():
@@ -55,7 +55,7 @@ def sentiment_summary(df):
 
 
 
-# 📌 Команды
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Привет! Я бот для анализа новостей по тональности.\n"
                                     "Напиши /analyze чтобы начать или /help для списка команд.")
@@ -123,8 +123,6 @@ async def scheduled_news_analysis(context: ContextTypes.DEFAULT_TYPE):
 
 
 
-
-# 📌 Команда /analyze с запуском расписания
 async def analyze(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         chat_id = update.effective_chat.id
@@ -145,12 +143,9 @@ async def analyze(update: Update, context: ContextTypes.DEFAULT_TYPE):
         else:
             msg = "ℹ️ Автообновление уже активно"
         
-        # Первоначальный анализ
+
         await update.message.reply_text("Анализирую новости...")
-        # df = analyze_news_sentiment()
-        # messages = format_news(df.head(10))
-        # for msg in messages:
-        #     await update.message.reply_text(msg, parse_mode='Markdown')
+
             
         await update.message.reply_text(msg)
         
@@ -158,15 +153,6 @@ async def analyze(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(f"🚨 Ошибка: {e}")
         logging.error(f"Analyze error: {e}")
 
-# async def analyze(update: Update, context: ContextTypes.DEFAULT_TYPE):
-#     await update.message.reply_text("Анализирую новости, подожди секундочку...")
-#     try:
-#         df = analyze_news_sentiment()
-#         messages = format_news(df.head(10))
-#         for msg in messages:
-#             await update.message.reply_text(msg, parse_mode='Markdown')
-#     except Exception as e:
-#         await update.message.reply_text(f"Произошла ошибка: {e}")
 
 
 async def today(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -192,7 +178,7 @@ async def last(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(msg)
 
 
-# 🚀 Запуск
+
 def run_bot():
     application = ApplicationBuilder().token("8013556995:AAHNXL5_8nxG_548hEhiByITWAkQgR5J8fY").build()
 
